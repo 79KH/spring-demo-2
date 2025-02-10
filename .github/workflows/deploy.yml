@@ -1,0 +1,63 @@
+name: CI/CD for Spring Boot Deployment
+
+on:
+  push:
+    branches:
+      - main # Chạy pipeline khi có thay đổi trên nhánh `main`
+  pull_request:
+    branches:
+      - main # Kiểm tra khi có Pull Request vào `main`
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Lấy mã nguồn từ GitHub
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 2. Cài đặt JDK 21
+      - name: Set up JDK 21
+        uses: actions/setup-java@v3
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      # 3. Build Gradle Project
+      - name: Build Gradle Project
+        run: |
+          chmod +x gradlew
+          ./gradlew clean build -x test
+
+      # 4. Kiểm tra Unit Tests
+      - name: Run Unit Tests
+        run: ./gradlew test
+
+      # 5. Build Docker Image
+      - name: Build Docker Image
+        run: |
+          docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/spring-dynamodb-app:latest .
+
+      # 6. Push Docker Image lên Docker Hub
+      - name: Push Docker Image to Docker Hub
+        run: |
+          echo "${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}" | docker login -u ${{ secrets.DOCKER_HUB_USERNAME }} --password-stdin
+          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/spring-dynamodb-app:latest
+
+      # 7. Deploy lên ECS
+      - name: Deploy to ECS
+        run: |
+          aws ecs update-service \
+            --cluster spring-dynamodb-cluster \
+            --service spring-dynamodb-service \
+            --force-new-deployment
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: 'ap-southeast-2'
+
+      # 8. Thông báo thành công
+      - name: Notify Success
+        if: success()
+        run: echo "Deployment Successful!"
