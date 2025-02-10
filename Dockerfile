@@ -5,11 +5,12 @@ FROM eclipse-temurin:21-jdk-alpine AS build
 WORKDIR /app
 
 # Copy Gradle wrapper and settings
-COPY gradle gradle
-COPY gradlew build.gradle settings.gradle gradle.properties ./
+COPY gradlew build.gradle settings.gradle ./
+COPY gradle ./gradle
+RUN chmod +x gradlew
 
 # Pre-download dependencies (cache dependencies for faster builds)
-RUN ./gradlew dependencies --no-daemon
+RUN ./gradlew build -x test --no-daemon || true
 
 # Copy source code
 COPY src ./src
@@ -28,6 +29,7 @@ COPY --from=build /app/build/libs/*.jar app.jar
 
 # Create a non-root user for better security
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+RUN chown appuser:appgroup /app/app.jar
 USER appuser
 
 # Configure JVM options and entry point
