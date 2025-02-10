@@ -39,13 +39,13 @@ jobs:
       # 5. Build Docker Image
       - name: Build Docker Image
         run: |
-          docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/spring-dynamodb-app:latest .
+          docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/hawnnn/spring-demo-2 .
 
       # 6. Push Docker Image lên Docker Hub
       - name: Push Docker Image to Docker Hub
         run: |
           echo "${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}" | docker login -u ${{ secrets.DOCKER_HUB_USERNAME }} --password-stdin
-          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/spring-dynamodb-app:latest
+          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/hawnnn/spring-demo-2
 
       # 7. Deploy lên ECS
       - name: Deploy to ECS
