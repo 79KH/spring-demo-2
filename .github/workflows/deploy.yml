@@ -3,10 +3,10 @@ name: CI/CD for Spring Boot Deployment
 on:
   push:
     branches:
-      - main # Chạy pipeline khi có thay đổi trên nhánh `main`
+      - main
   pull_request:
     branches:
-      - main # Kiểm tra khi có Pull Request vào `main`
+      - main
 
 jobs:
   deploy:
@@ -24,30 +24,44 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      # 3. Build Gradle Project
+      # 3. Build ứng dụng Spring Boot
       - name: Build Gradle Project
         run: |
           chmod +x gradlew
           ./gradlew clean build -x test
 
-      # 4. Build Project (Skip Tests)
-      - name: Build Project (Skip Tests)
-        run: |
-          chmod +x gradlew
-          ./gradlew clean build -x test
-
-      # 5. Build Docker Image
+      # 4. Build Docker Image
       - name: Build Docker Image
         run: |
           docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/spring-demo-2 .
 
-      # 6. Push Docker Image lên Docker Hub
-      - name: Push Docker Image to Docker Hub
+      # 5. Đăng nhập vào DockerHub
+      - name: Login to DockerHub
         run: |
           echo "${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}" | docker login -u ${{ secrets.DOCKER_HUB_USERNAME }} --password-stdin
+
+      # 6. Push Docker Image lên DockerHub
+      - name: Push Docker Image to Docker Hub
+        run: |
           docker push ${{ secrets.DOCKER_HUB_USERNAME }}/spring-demo-2
 
-      # 7. Deploy lên ECS
+      # 7. Kiểm tra AWS Credentials
+      - name: Debug AWS Credentials
+        run: aws sts get-caller-identity
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: 'ap-southeast-2'
+
+      # 8. Kiểm tra quyền AWS ECS
+      - name: Check AWS ECS Permissions
+        run: aws ecs describe-clusters --clusters spring-demo-cluster-1
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: 'ap-southeast-2'
+
+      # 9. Deploy lên ECS
       - name: Deploy to ECS
         run: |
           aws ecs update-service \
@@ -59,7 +73,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: 'ap-southeast-2'
 
-      # 8. Thông báo thành công
+      # 10. Thông báo thành công
       - name: Notify Success
         if: success()
         run: echo "Deployment Successful!"
