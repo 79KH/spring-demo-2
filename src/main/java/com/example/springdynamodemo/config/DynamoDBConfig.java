@@ -9,6 +9,8 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import com.amazonaws.auth.BasicAWSCredentials;
+
 
 @Configuration
 public class DynamoDBConfig {
@@ -25,9 +27,6 @@ public class DynamoDBConfig {
     @Value("${aws.dynamodb.secretKey}")
     private String dynamodbSecretKey;
 
-    @Value("${aws.dynamo.sessionToken}")
-    private String dynamodbSessionToken;
-
     @Bean
     public DynamoDBMapper dynamoDBMapper() {
         return new DynamoDBMapper(buildAmazonDynamoDB());
@@ -35,22 +34,21 @@ public class DynamoDBConfig {
 
     private AmazonDynamoDB buildAmazonDynamoDB() {
         return AmazonDynamoDBClientBuilder
-                .standard()
-                .withEndpointConfiguration(
-                        new AwsClientBuilder.EndpointConfiguration(
-                                dynamodbEndpoint,
-                                awsRegion
-                        )
-                )
-                .withCredentials(
-                        new AWSStaticCredentialsProvider(
-                                new BasicSessionCredentials(
-                                        dynamodbAccessKey,
-                                        dynamodbSecretKey,
-                                        dynamodbSessionToken
-                                )
-                        )
-                )
-                .build();
+            .standard()
+            .withEndpointConfiguration(
+                    new AwsClientBuilder.EndpointConfiguration(
+                            dynamodbEndpoint,
+                            awsRegion
+                    )
+            )
+            .withCredentials(
+                    new AWSStaticCredentialsProvider(
+                            new BasicAWSCredentials(
+                                    dynamodbAccessKey,
+                                    dynamodbSecretKey
+                            )
+                    )
+            )
+            .build();
     }
 }
